@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from app.database.database import SessionLocal, engine, Base
 from app.models.consulta import Consulta
+from app.services.cidade_service import calcular_score, gerar_insight
+from app.services.clima_service import get_clima
 
 Base.metadata.create_all(bind=engine)
 
@@ -24,40 +26,8 @@ def home():
     
     return {"mensagem": "API funcionando"}
 
-
-def calcular_score(dados):
-    score = 0
-    
-    #custo
-    if dados["custo"] == "baixo":
-        score += 3
-    elif dados["custo"] == "medio":
-        score += 2
-    else: 
-        score += 1
-        
-    #clima
-    if dados["clima"] == "ameno":
-        score += 3
-    else: 
-        score +=1
-    return score
-
-def gerar_insight(dados, score):
-   
-    if dados["custo"] == "alto":
-        return "custo de vida elevado pode ser um problema"
-    
-    if dados["clima"] == "quente":
-        return "clima quente pode impactar qualidade de vida"
-    
-    if score >= 5:
-        return "cidade com bom custo-benefício"
-    
-    return "cidade com características medianas"
-
 @app.get("/cidade/{nome}")
-def get_cidade(nome : str):
+async def get_cidade(nome : str):
     cidade = fake_db.get(nome.lower())
     
     if not cidade:
@@ -66,6 +36,7 @@ def get_cidade(nome : str):
     
     score = calcular_score(cidade)
     insight = gerar_insight(cidade, score)
+    clima_real = await get_clima(nome)
     
     #salvar no Banco
     db = SessionLocal()
@@ -84,14 +55,19 @@ def get_cidade(nome : str):
         "cidade": nome,
         "dados": cidade,
         "score": score,
-        "insight": insight
+        "insight": insight,
+        "clima_real": clima_real
     }
     
 @app.get("/historico")
-def get_historico():
+def get_historico(cidade: str = None):
     db = SessionLocal()
     
-    consultas = db.query(Consulta).all()
+    if cidade: 
+        consultas = db.query(Consulta).filter(Consulta.cidade == cidade).all()
+    else:
+        consultas = db.query(Consulta).all()
+        
     
     resultado = []
     
@@ -105,3 +81,32 @@ def get_historico():
     db.close()
     
     return resultado
+
+@app.get("/Comparar")
+def comparar(cidades: str):
+    lista_cidades = cidades.split(",")
+    
+    resultado = []
+    
+    for nome in lista_cidades:
+        cidade = fake_db.get(nome.lower())
+        
+        if not cidade:
+            continue #ignora se não existir
+        
+        score = calcular_score(cidade)
+        
+        resultado.append({
+            "cidade": nome,
+            "score": score,
+            "insight": gerar_insight(cidade, score)
+        })
+        
+    #ordenar por score (maior primeiro)
+    resultado.sort(key=lambda x: x["score"], reverse=True)
+    
+    for i, item in enumerate(resultado):
+        item["posicao"] = i+ 1
+    
+    return resultado
+    
