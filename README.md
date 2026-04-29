@@ -1,4 +1,4 @@
-# 🌎 API de Dados Públicos Inteligentes
+# API de Dados Públicos Inteligentes
 
 API desenvolvida com FastAPI que coleta e analisa dados de cidades, gerando insights automáticos sobre qualidade de vida.
 

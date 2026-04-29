@@ -1,5 +1,8 @@
 from fastapi import FastAPI
-from fastapi import HTTPException
+from app.database.database import SessionLocal, engine, Base
+from app.models.consulta import Consulta
+
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
@@ -58,10 +61,24 @@ def get_cidade(nome : str):
     cidade = fake_db.get(nome.lower())
     
     if not cidade:
+        from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Cidade não encontrada")
     
     score = calcular_score(cidade)
     insight = gerar_insight(cidade, score)
+    
+    #salvar no Banco
+    db = SessionLocal()
+    
+    nova_consulta = Consulta(
+        cidade= nome,
+        score= score,
+        insight= insight
+    )
+
+    db.add(nova_consulta)
+    db.commit()
+    db.close()
     
     return {
         "cidade": nome,
@@ -69,4 +86,22 @@ def get_cidade(nome : str):
         "score": score,
         "insight": insight
     }
-
+    
+@app.get("/historico")
+def get_historico():
+    db = SessionLocal()
+    
+    consultas = db.query(Consulta).all()
+    
+    resultado = []
+    
+    for c in consultas:
+        resultado.append({
+            "cidade": c.cidade,
+            "score": c.score,
+            "insight": c.insight
+        })
+    
+    db.close()
+    
+    return resultado
