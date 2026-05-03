@@ -1,18 +1,22 @@
 import httpx
 
-async def get_populacao(cidade: str):
-    url =  f"https://servicodados.ibge.gov.br/api/v1/localidades/municipios/{cidade}"
+BASE_URL = "https://servicodados.ibge.gov.br/api/v1/localidades/estados/SP/municipios"
+
+async def buscar_cidade(nome : str):
     
     async with httpx.AsyncClient() as client:
-        response = await client.get(url)
+        response = await client.get(BASE_URL)
         
     if response.status_code != 200:
-        print ("Erro IBGE:", response.text)
+        print("Erro IBGE:", response.text)
         return None
     
-    data = response.json()
+    cidades = response.json()
     
-    return {
-        "nome": data.get("nome"),
-        "uf": data.get("microrregiao", {}).get("mesorregiao",{}).get("UF", {}).get("sigla")
+    for cidade in cidades:
+        if cidade["nome"].lower() == nome.lower():
+            return {
+                "id": cidade["id"],
+                "nome": cidade["nome"],
+                "uf": "SP"
     }

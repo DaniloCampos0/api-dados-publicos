@@ -1,5 +1,5 @@
 
-def calcular_score(dados, clima_real=None):
+def calcular_score(dados, clima_real=None, ibge=None):
     score = 0
     
     #custo
@@ -25,6 +25,12 @@ def calcular_score(dados, clima_real=None):
             score += 3
         else: 
             score +=1
+            
+    if ibge: 
+        if ibge["uf"] == "SP":
+            score += 2 #exemplo: SP tem mais oportunidades
+        else:
+            score += 1
             
     return score
 
