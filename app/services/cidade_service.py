@@ -1,5 +1,5 @@
 
-def calcular_score(dados):
+def calcular_score(dados, clima_real=None):
     score = 0
     
     #custo
@@ -10,11 +10,22 @@ def calcular_score(dados):
     else: 
         score += 1
         
-    #clima
-    if dados["clima"] == "ameno":
-        score += 3
-    else: 
-        score +=1
+    #clima_real
+    if clima_real:
+        temp = clima_real["temperatura"]
+        
+        if 20 <= temp <= 25:
+            score += 3
+        elif temp <= 30:
+            score += 2
+        else:
+            score +=1
+    else:
+        if dados["clima"] == "ameno":
+            score += 3
+        else: 
+            score +=1
+            
     return score
 
 def gerar_insight(dados, score):

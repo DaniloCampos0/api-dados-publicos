@@ -83,7 +83,7 @@ def get_historico(cidade: str = None):
     return resultado
 
 @app.get("/Comparar")
-def comparar(cidades: str):
+async def comparar(cidades: str):
     lista_cidades = cidades.split(",")
     
     resultado = []
@@ -94,19 +94,46 @@ def comparar(cidades: str):
         if not cidade:
             continue #ignora se não existir
         
+        clima_real = await get_clima(nome)
+        
         score = calcular_score(cidade)
         
         resultado.append({
             "cidade": nome,
             "score": score,
+            "temperatura": clima_real["temperatura"] if clima_real else None,
             "insight": gerar_insight(cidade, score)
         })
         
     #ordenar por score (maior primeiro)
     resultado.sort(key=lambda x: x["score"], reverse=True)
     
+    #adicionar posição
     for i, item in enumerate(resultado):
         item["posicao"] = i+ 1
     
     return resultado
     
+@app.get("/recomendar")
+async def recomendar(cidades: str):
+    lista_cidades = cidades.split(",")
+    
+    melhor = None
+    
+    for nome in lista_cidades:
+        cidade = fake_db.get(nome.lower())
+        
+        if not cidade:
+            continue
+        
+        clima_real = await get_clima(nome)
+        score = calcular_score(cidade,clima_real)
+        
+        if not melhor or score > melhor ["score"]:
+            melhor = {
+                "cidade":nome,
+                "score":score,
+                "temperatura": clima_real["temperatura"] if clima_real else None,
+                "insight": gerar_insight(cidade, score)
+            }
+    return melhor
