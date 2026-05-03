@@ -1,9 +1,8 @@
 import httpx
 
-BASE_URL = "https://servicodados.ibge.gov.br/api/v1/localidades/estados/SP/municipios"
+BASE_URL = "https://servicodados.ibge.gov.br/api/v1/localidades/municipios"
 
 async def buscar_cidade(nome : str):
-    
     async with httpx.AsyncClient() as client:
         response = await client.get(BASE_URL)
         
@@ -13,10 +12,12 @@ async def buscar_cidade(nome : str):
     
     cidades = response.json()
     
+    nome = nome.lower().strip()
+    
     for cidade in cidades:
-        if cidade["nome"].lower() == nome.lower():
+        if cidade["nome"].lower() == nome:
             return {
                 "id": cidade["id"],
                 "nome": cidade["nome"],
-                "uf": "SP"
+                "uf": cidade["microrregiao"]["mesorregiao"]["UF"]["sigla"]
     }

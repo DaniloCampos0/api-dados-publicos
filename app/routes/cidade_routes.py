@@ -7,31 +7,25 @@ from app.models.consulta import Consulta
 
 router = APIRouter()
 
-fake_db = {
-    "sao paulo": {
-        "populacao": 12300000,
-        "clima": "quente",
-        "custo": "alto"
-    },
-    "campinas": {
-        "populacao": 111000,
-        "clima": "ameno",
-        "custo": "medio"
-    }
-}
+
 
 @router.get("/cidade/{nome}")
 async def get_cidade(nome : str):
-    cidade = fake_db.get(nome.lower())
+    dados_ibge = await buscar_cidade(nome)
     
-    if not cidade:
-        from fastapi import HTTPException
-        raise HTTPException(status_code=404, detail="Cidade não encontrada")
+    if not dados_ibge:
+         raise HTTPException(status_code=404, detail="Cidade não encontrada")
     
     clima_real = await get_clima(nome)
-    dados_ibge = await buscar_cidade(nome)
-    score = calcular_score(cidade, clima_real, dados_ibge)
-    insight = gerar_insight(cidade, score)
+    
+    dados = {
+        "populacao":None, #vamos melhorar
+        "clima": clima_real["descricao"] if clima_real else "desconhecido",
+        "custo": "medio" #regra inicial
+        }
+         
+    score = calcular_score(dados, clima_real, dados_ibge)
+    insight = gerar_insight(dados, score)
     
     #salvar no Banco
     db = SessionLocal()
@@ -48,7 +42,7 @@ async def get_cidade(nome : str):
     
     return {
         "cidade": nome,
-        "dados": cidade,
+        "dados": dados,
         "score": score,
         "insight": insight,
         "clima_real": clima_real,
