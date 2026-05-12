@@ -4,12 +4,13 @@ from app.services.clima_service import get_clima
 from app.services.ibge_service import buscar_cidade
 from app.database.database import SessionLocal
 from app.models.consulta import Consulta
+from app.schemas.cidade_schemas import CidadeResponse
 
 router = APIRouter()
 
 
 
-@router.get("/cidade/{nome}")
+@router.get("/cidade/{nome}", response_model=CidadeResponse)
 async def get_cidade(nome : str):
     dados_ibge = await buscar_cidade(nome)
     
@@ -78,22 +79,26 @@ async def comparar(cidades: str):
     resultado = []
     
     for nome in lista_cidades:
-        cidade = fake_db.get(nome.lower())
-        
-        if not cidade:
-            continue #ignora se não existir
+        dados_ibge = await buscar_cidade(nome)
+        if not dados_ibge:
+             continue
         
         clima_real = await get_clima(nome)
-        dados_ibge = await buscar_cidade(nome)
         
-        score = calcular_score(cidade, clima_real, dados_ibge)
-        insight = gerar_insight(cidade, score)
+        dados = {
+        "populacao": None,
+        "clima": clima_real["descricao"] if clima_real else "desconhecido",
+        "custo": "medio"
+    }
+        
+        score = calcular_score(dados, clima_real, dados_ibge)
+        insight = gerar_insight(dados, score)
         
         resultado.append({
             "cidade": nome,
             "score": score,
             "temperatura": clima_real["temperatura"] if clima_real else None,
-            "insight": gerar_insight(cidade, score)
+            "insight": gerar_insight(dados, score)
         })
         
     #ordenar por score (maior primeiro)
@@ -112,20 +117,25 @@ async def recomendar(cidades: str):
     melhor = None
     
     for nome in lista_cidades:
-        cidade = fake_db.get(nome.lower())
-        
-        if not cidade:
+        dados_ibge = await buscar_cidade(nome)
+        if not dados_ibge:
             continue
         
         clima_real = await get_clima(nome)
-        dados_ibge = await buscar_cidade(nome)
-        score = calcular_score(cidade,clima_real, dados_ibge)
+        
+        dados = {
+        "populacao": None,
+        "clima": clima_real["descricao"] if clima_real else "desconhecido",
+        "custo": "medio"
+    }
+        
+        score = calcular_score(dados,clima_real, dados_ibge)
         
         if not melhor or score > melhor ["score"]:
             melhor = {
                 "cidade":nome,
                 "score":score,
                 "temperatura": clima_real["temperatura"] if clima_real else None,
-                "insight": gerar_insight(cidade, score)
+                "insight": gerar_insight(dados, score)
             }
     return melhor
